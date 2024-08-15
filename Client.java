@@ -3,6 +3,10 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
 public class Client implements Runnable {
 
@@ -10,6 +14,9 @@ public class Client implements Runnable {
     private BufferedReader in;
     private PrintWriter out;
     private boolean done;
+    private JFrame frame;
+    private JTextArea textArea;
+    private JTextField textField;
 
     @Override
     public void run() {
@@ -65,6 +72,35 @@ public class Client implements Runnable {
                 shutdown();
             }
         }
+    }
+
+    public Client() {
+        frame = new JFrame("SoyChat");
+        textArea = new JTextArea(20,50);
+        textArea.setEditable(false);
+        textField = new JTextField(50);
+
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setLayout(new BorderLayout());
+        frame.add(new JScrollPane(textArea), BorderLayout.CENTER);
+        frame.add(textField, BorderLayout.SOUTH);
+
+        textField.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String message = textField.getText().trim();
+                if (!message.isEmpty()) {
+                    out.println(message);
+                    textField.setText("");
+                    if (message.equals("/quit")) {
+                        shutdown();
+                    }
+                }
+            }
+        });
+
+        frame.pack();
+        frame.setVisible(true);
     }
 
     public static void main(String[] args) {

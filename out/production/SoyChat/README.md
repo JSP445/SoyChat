@@ -1,0 +1,1 @@
+Group chat for brimstones to soy out over new sugoi anime
