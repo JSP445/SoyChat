@@ -5,8 +5,8 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 
 public class Client implements Runnable {
 
@@ -25,18 +25,16 @@ public class Client implements Runnable {
             out = new PrintWriter(client.getOutputStream(), true);
             in = new BufferedReader(new InputStreamReader(client.getInputStream()));
 
-            InputHandler inHandler = new InputHandler();
-            Thread t = new Thread(inHandler);
-            t.start();
-
             String inMessage;
             while ((inMessage = in.readLine()) != null) {
-                System.out.println(inMessage);
+                final String message = inMessage;
+                SwingUtilities.invokeLater(() -> {
+                    textArea.append(message + "\n");
+                });
             }
         } catch (IOException e) {
             shutdown();
         }
-
     }
 
     public void shutdown() {
@@ -52,59 +50,42 @@ public class Client implements Runnable {
         }
     }
 
-    class InputHandler implements Runnable {
-
-        @Override
-        public void run() {
-            try {
-                BufferedReader inReader = new BufferedReader(new InputStreamReader(System.in));
-                while (!done) {
-                    String message = inReader.readLine();
-                    if (message.equals("/quit")) {
-                        out.println(message);
-                        inReader.close();
-                        shutdown();
-                    } else {
-                        out.println(message);
-                    }
-                }
-            } catch (IOException e) {
-                shutdown();
-            }
-        }
-    }
-
     public Client() {
         frame = new JFrame("SoyChat");
-        textArea = new JTextArea(20,50);
+        textArea = new JTextArea(20, 50);
         textArea.setEditable(false);
         textField = new JTextField(50);
+
+        textField.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    String message = textField.getText().trim();
+                    if (!message.isEmpty()) {
+                        out.println(message);
+                        // textArea.append(message + "\n");
+                        textField.setText("");
+                        if (message.equals("/quit")) {
+                            shutdown();
+                        }
+                    }
+                }
+            }
+        });
 
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLayout(new BorderLayout());
         frame.add(new JScrollPane(textArea), BorderLayout.CENTER);
         frame.add(textField, BorderLayout.SOUTH);
 
-        textField.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                String message = textField.getText().trim();
-                if (!message.isEmpty()) {
-                    out.println(message);
-                    textField.setText("");
-                    if (message.equals("/quit")) {
-                        shutdown();
-                    }
-                }
-            }
-        });
-
         frame.pack();
         frame.setVisible(true);
     }
 
     public static void main(String[] args) {
-        Client client = new Client();
-        client.run();
+        SwingUtilities.invokeLater(() -> {
+            Client client = new Client();
+            new Thread(client).start();
+        });
     }
 }
