@@ -7,6 +7,10 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.io.FileWriter;
+import java.io.File;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Client implements Runnable {
 
@@ -17,6 +21,15 @@ public class Client implements Runnable {
     private JFrame frame;
     private JTextArea textArea;
     private JTextField textField;
+    private String nickname;
+    private static final Map<String, String> EMOJI_MAP = new HashMap<>();
+
+    static {
+        EMOJI_MAP.put(":smile:", "\uD83D\uDE04");
+        EMOJI_MAP.put(":heart:", "\u2764\uFE0F");
+        EMOJI_MAP.put(":thumbsup:", "\uD83D\uDC4D");
+        // Add more emojis as needed
+    }
 
     @Override
     public void run() {
@@ -24,6 +37,9 @@ public class Client implements Runnable {
             client = new Socket("127.0.0.1", 9999);
             out = new PrintWriter(client.getOutputStream(), true);
             in = new BufferedReader(new InputStreamReader(client.getInputStream()));
+
+            // Send the nickname to the server first thing
+            out.println(nickname + " joined the chat!");
 
             String inMessage;
             while ((inMessage = in.readLine()) != null) {
@@ -56,14 +72,28 @@ public class Client implements Runnable {
         textArea.setEditable(false);
         textField = new JTextField(50);
 
+        // Prompt the user for a nickname once
+        nickname = JOptionPane.showInputDialog(frame, "Enter your nickname:", "Nickname", JOptionPane.PLAIN_MESSAGE);
+        if (nickname == null || nickname.trim().isEmpty()) {
+            nickname = "Anonymous";
+        }
+
         textField.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
                 if (e.getKeyCode() == KeyEvent.VK_ENTER) {
                     String message = textField.getText().trim();
                     if (!message.isEmpty()) {
-                        out.println(message);
-                        // textArea.append(message + "\n");
+                        message = replaceEmojis(message);
+                        if (message.startsWith("/msg ")) {
+                            handlePrivateMessage(message);
+                        } else if (message.equals("/clear")) {
+                            textArea.setText("");
+                        } else if (message.equals("/save")) {
+                            saveChatHistory();
+                        } else {
+                            out.println(nickname + ": " + message);
+                        }
                         textField.setText("");
                         if (message.equals("/quit")) {
                             shutdown();
@@ -80,6 +110,26 @@ public class Client implements Runnable {
 
         frame.pack();
         frame.setVisible(true);
+    }
+
+    private String replaceEmojis(String message) {
+        for (Map.Entry<String, String> entry : EMOJI_MAP.entrySet()) {
+            message = message.replace(entry.getKey(), entry.getValue());
+        }
+        return message;
+    }
+
+    private void handlePrivateMessage(String message) {
+        out.println(message);  // This message should be parsed and handled on the server side for proper delivery.
+    }
+
+    private void saveChatHistory() {
+        try (FileWriter writer = new FileWriter(new File("chat_history.txt"))) {
+            writer.write(textArea.getText());
+            JOptionPane.showMessageDialog(frame, "Chat history saved!", "Save Chat", JOptionPane.INFORMATION_MESSAGE);
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(frame, "Failed to save chat history.", "Save Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     public static void main(String[] args) {
