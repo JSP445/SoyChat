@@ -72,6 +72,10 @@ public class Client implements Runnable {
         textArea.setEditable(false);
         textField = new JTextField(50);
 
+        // Load and set the icon for the window
+        ImageIcon icon = new ImageIcon(getClass().getResource("./emotes/soyjak.jpg"));
+        frame.setIconImage(icon.getImage());
+
         // Prompt the user for a nickname once
         nickname = JOptionPane.showInputDialog(frame, "Enter your nickname:", "Nickname", JOptionPane.PLAIN_MESSAGE);
         if (nickname == null || nickname.trim().isEmpty()) {
